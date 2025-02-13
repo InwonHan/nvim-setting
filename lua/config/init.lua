@@ -19,3 +19,15 @@ local plugins = "plugins"
 local opts = {}
 
 require("lazy").setup(plugins, opts)
+
+local plugins = {
+  {
+    "stevearc/overseer.nvim",
+    opts = {},
+    config = function()
+      require("overseer").setup()
+    end,
+  },
+}
+
+return plugins
