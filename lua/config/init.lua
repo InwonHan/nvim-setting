@@ -11,6 +11,7 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+require("config.colorscheme").setup()
 require("config.globals")
 require("config.keymaps")
 require("config.options")

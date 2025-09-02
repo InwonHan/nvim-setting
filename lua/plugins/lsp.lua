@@ -10,9 +10,29 @@ return {
         { "folke/neodev.nvim", opts = {} },
     },
     config = function()
-        -- Load Mason FIRST before setting up LSP servers
+        -- Load Mason FIRST
         require("mason").setup()
-        require("mason-lspconfig").setup()
+        
+        -- Load mason-lspconfig
+        local mason_lspconfig = require("mason-lspconfig")
+        
+        -- Set up Mason LSP config with servers to install
+        mason_lspconfig.setup({
+            ensure_installed = {
+                "lua_ls",
+                "html",
+                "csharp_ls",
+                "cssls",
+                "tailwindcss",
+                "dockerls",
+                "graphql",
+                "pyright",
+                "sorbet",
+                "sqlls",
+            },
+        })
+        
+        -- Set up mason tool installer
         require("mason-tool-installer").setup({
             ensure_installed = {
                 "eslint_d",
@@ -30,22 +50,6 @@ return {
 
         local capabilities = cmp_nvim_lsp.default_capabilities()
 
-        -- Set up Mason and LSP servers
-        require("mason-lspconfig").setup({
-            ensure_installed = {
-                "lua_ls",
-                "html",
-                "csharp_ls",
-                "cssls",
-                "tailwindcss",
-                "dockerls",
-                "graphql",
-                "pyright",
-                "sorbet",
-                "sqlls",
-            },
-        })
-
         -- Diagnostic symbols in the sign column
         local signs = { Error = " ", Warn = " ", Hint = "󰠠 ", Info = " " }
         for type, icon in pairs(signs) do
@@ -53,66 +57,52 @@ return {
             vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
         end
 
-        -- Setup handlers for each LSP server
-        require("mason-lspconfig").setup_handlers({
-            function(server_name)
-                lspconfig[server_name].setup({
-                    capabilities = capabilities,
-                })
-            end,
-
-            ["graphql"] = function()
-                -- configure graphql language server
-                lspconfig["graphql"].setup({
-                    capabilities = capabilities,
-                    filetypes = { "graphql", "gql", "typescriptreact", "javascriptreact" },
-                })
-            end,
-                
-            ["emmet_ls"] = function()
-                -- configure emmet language server
-                lspconfig["emmet_ls"].setup({
-                    capabilities = capabilities,
-                    filetypes = { "html", "typescriptreact", "javascriptreact", "css" },
-                })
-            end,
-
-            ["lua_ls"] = function()
-                -- configure lua server (with special settings)
-                lspconfig["lua_ls"].setup({
-                    capabilities = capabilities,
-                    settings = {
+        -- Manual LSP server setup (alternative to setup_handlers)
+        local servers = {
+            lua_ls = {
+                settings = {
                     Lua = {
-                        -- make the language server recognize "vim" global
                         diagnostics = {
-                        globals = { "vim" },
+                            globals = { "vim" },
                         },
                         completion = {
-                        callSnippet = "Replace",
+                            callSnippet = "Replace",
                         },
                     },
-                    },
-                })
-            end,
+                },
+            },
+            html = {},
+            csharp_ls = {},
+            cssls = {},
+            tailwindcss = {},
+            dockerls = {},
+            graphql = {
+                filetypes = { "graphql", "gql", "typescriptreact", "javascriptreact" },
+            },
+            pyright = {},
+            sorbet = {},
+            sqlls = {},
+            emmet_ls = {
+                filetypes = { "html", "typescriptreact", "javascriptreact", "css" },
+            },
+            eslint = {
+                on_attach = function(client, bufnr)
+                    vim.api.nvim_create_autocmd("BufWritePre", {
+                        buffer = bufnr,
+                        command = "EslintFixAll",
+                    })
+                end,
+            },
+        }
 
-            ["csharp_ls"] = function()
-                lspconfig["csharp_ls"].setup({
-                    capabilities = capabilities,
-                })
-            end,
-
-            ["eslint"] = function()
-                lspconfig["eslint"].setup({
-                    capabilities = capabilities,
-                    on_attach = function(client, bufnr)
-                        vim.api.nvim_create_autocmd("BufWritePre", {
-                            buffer = bufnr,
-                            command = "EslintFixAll",
-                        })
-                    end,
-                })
-            end,
-        })
+        -- Set up each server
+        for server_name, server_config in pairs(servers) do
+            local config = vim.tbl_deep_extend("force", {
+                capabilities = capabilities,
+            }, server_config)
+            
+            lspconfig[server_name].setup(config)
+        end
 
         -- Keybinds for LSP
         vim.api.nvim_create_autocmd("LspAttach", {
